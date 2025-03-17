@@ -2,7 +2,7 @@
 Student information for this assignment:
 
 Replace <FULL NAME> with your name.
-On my/our honor, Alan Kurian Abraham and n/a, this
+On my/our honor, Alan Abraham and n/a, this
 programming assignment is my own work and I have not provided this code to
 any other student.
 
@@ -19,12 +19,31 @@ UT EID 2: n/a
 import random
 import sys
 
+# ANSI escape codes for text color
+# These must be used by wrapping it around a single character string
+# for the test cases to work. Please use the color_word function to format
+# the feedback properly.
+
 CORRECT_COLOR = "\033[3;1;102m"
 WRONG_SPOT_COLOR = "\033[3;1;90;103m"
 NOT_IN_WORD_COLOR = "\033[3;1m"
 NO_COLOR = "\033[0m"
+
+# Used for the explanation.
 BOLD_COLOR = "\033[1m"
+
+# If you are colorblind for yellow and green, please use these colors instead.
+# Uncomment the two lines below. Commenting in and out can be done by
+# highlighting the  lines you care about and using:
+# on a windows/linux laptop: ctrl + /
+# on a mac laptop: cmd + /
+
+# CORRECT_COLOR = "\033[3;1;97;101m"
+# WRONG_SPOT_COLOR = "\033[3;1;97;104m"
+
+# The total number of letters allowed
 NUM_LETTERS = 5
+
 INVALID_INPUT = "Bad input detected. Please try again."
 
 
@@ -69,13 +88,11 @@ class Keyboard:
         for i, letter in enumerate(guessed_word):
             current_color = self.colors[letter]
             new_color = feedback_colors[i]
-            if current_color == CORRECT_COLOR:
-                continue
-            elif new_color == CORRECT_COLOR:
-                self.colors[letter] = new_color
-            elif current_color != WRONG_SPOT_COLOR and new_color == WRONG_SPOT_COLOR:
-                self.colors[letter] = new_color
-            elif current_color == NO_COLOR:
+            if (current_color != CORRECT_COLOR) and (
+                (new_color == CORRECT_COLOR) or
+                (new_color == WRONG_SPOT_COLOR and current_color != CORRECT_COLOR) or
+                (new_color == NOT_IN_WORD_COLOR and current_color == NO_COLOR)
+            ):
                 self.colors[letter] = new_color
 
     def __str__(self):
@@ -99,11 +116,18 @@ class Keyboard:
         post: Returns a formatted string with each letter colored according to feedback
               and arranged to match a typical keyboard layout.
         """
-        keyboard_str = []
-        for i, row in enumerate(self.rows):
-            row_str = " ".join(color_word(self.colors[letter], letter) for letter in row)
-            keyboard_str.append(" " * i + row_str)
-        return "\n".join(keyboard_str)
+        keyboard_str = ""
+        for letter in self.rows[0]:
+            keyboard_str += color_word(self.colors[letter], letter) + " "
+        keyboard_str = keyboard_str.rstrip() + "\n"
+        keyboard_str += " "
+        for letter in self.rows[1]:
+            keyboard_str += color_word(self.colors[letter], letter) + " "
+        keyboard_str = keyboard_str.rstrip() + "\n"
+        keyboard_str += "   "
+        for letter in self.rows[2]:
+            keyboard_str += color_word(self.colors[letter], letter) + " "
+        return keyboard_str.rstrip()
 
 
 class WordFamily:
@@ -136,6 +160,7 @@ class WordFamily:
         """
         self.feedback_colors = feedback_colors
         self.words = words
+
         self.difficulty = sum(self.COLOR_DIFFICULTY[color] for color in feedback_colors)
 
     def __lt__(self, other):
@@ -155,7 +180,7 @@ class WordFamily:
         if len(self.words) != len(other.words):
             return len(self.words) > len(other.words)
         if self.difficulty != other.difficulty:
-            return self.difficulty < other.difficulty
+            return self.difficulty > other.difficulty
         return self.feedback_colors < other.feedback_colors
 
     def __str__(self):
@@ -198,7 +223,6 @@ def print_explanation(attempts):
     print("is not in the word in any spot.")
     print()
 
-
 def color_word(colors, word):
     """
     Colors a given word using ANSI formatting then returns it as a new string.
@@ -220,7 +244,6 @@ def color_word(colors, word):
 
     return "".join(colored_word)
 
-
 def get_attempt_label(attempt_number):
     """
     Generates the label for the given attempt number.
@@ -234,7 +257,6 @@ def get_attempt_label(attempt_number):
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(attempt_number % 10, "th")
 
     return f"{attempt_number}{suffix}"
-
 
 def prepare_game():
     """
@@ -252,6 +274,7 @@ def prepare_game():
 
     valid_words_file_name = "valid_guesses.txt"
 
+    # Must have 1 or 2 arguments
     if len(sys.argv) > 3:
         raise ValueError()
     if sys.argv[-1] == "debug":
@@ -264,9 +287,12 @@ def prepare_game():
         attempts = int(sys.argv[1])
         if not 1 < attempts < 100:
             raise ValueError()
+    # Otherwise, must be bad input and returns None instead
     else:
         raise ValueError()
 
+    # Specify "ascii" as its representation (encoding) since it's required by
+    # pylint.
     with open(valid_words_file_name, "r", encoding="ascii") as valid_words:
         valid_words = [word.rstrip() for word in valid_words.readlines()]
 
@@ -285,12 +311,21 @@ def fast_sort(lst):
     """
     if len(lst) <= 1:
         return lst[:]
-    
-    pivot = lst[0]
-    less = [x for x in lst[1:] if x < pivot]
-    greater = [x for x in lst[1:] if x >= pivot]
-    
-    return fast_sort(less) + [pivot] + fast_sort(greater)
+    mid = len(lst) // 2
+    left = fast_sort(lst[:mid])
+    right = fast_sort(lst[mid:])
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i] < right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
 
 
 def get_feedback_colors(secret_word, guessed_word):
@@ -310,26 +345,19 @@ def get_feedback_colors(secret_word, guessed_word):
             length 5 with the ANSI coloring in each index as the returned value.
     """
     feedback = [NOT_IN_WORD_COLOR] * NUM_LETTERS
-    secret_letter_counts = {}
-
+    letter_counts = {}
     for letter in secret_word:
-        if letter in secret_letter_counts:
-            secret_letter_counts[letter] += 1
-        else:
-            secret_letter_counts[letter] = 1
-    
+        letter_counts[letter] = letter_counts.get(letter, 0) + 1
     for i in range(NUM_LETTERS):
         if guessed_word[i] == secret_word[i]:
             feedback[i] = CORRECT_COLOR
-            secret_letter_counts[guessed_word[i]] -= 1
-    
+            letter_counts[guessed_word[i]] -= 1
     for i in range(NUM_LETTERS):
         if feedback[i] != CORRECT_COLOR:
             letter = guessed_word[i]
-            if letter in secret_letter_counts and secret_letter_counts[letter] > 0:
+            if letter in letter_counts and letter_counts[letter] > 0:
                 feedback[i] = WRONG_SPOT_COLOR
-                secret_letter_counts[letter] -= 1
-    
+                letter_counts[letter] -= 1
     return feedback
 
 
@@ -354,16 +382,14 @@ def get_feedback(remaining_secret_words, guessed_word):
     """
     word_families = {}
     for secret_word in remaining_secret_words:
-        feedback = tuple(get_feedback_colors(secret_word, guessed_word))
-        if feedback not in word_families:
-            word_families[feedback] = []
-        word_families[feedback].append(secret_word)
-    
-    families = [WordFamily(feedback, words) for feedback, words in word_families.items()]
+        feedback_colors = tuple(get_feedback_colors(secret_word, guessed_word))
+        if feedback_colors in word_families:
+            word_families[feedback_colors].append(secret_word)
+        else:
+            word_families[feedback_colors] = [secret_word]
+    families = [WordFamily(colors, words) for colors, words in word_families.items()]
     sorted_families = fast_sort(families)
-    
-    hardest_family = sorted_families[-1]
-    
+    hardest_family = sorted_families[0]
     return hardest_family.feedback_colors, hardest_family.words
 
 
@@ -372,6 +398,7 @@ def main():
     This function is the main loop for the game. It calls prepare_game() to set up the game,
     then it loops continuously until the game is over.
     """
+
     try:
         valid = prepare_game()
     except ValueError:
@@ -391,6 +418,7 @@ def main():
         prompt = f"Enter your {attempt_number_string} guess: "
         guess = input(prompt)
 
+        # Mimics user typing out the guess when reading input from a file.
         if not sys.stdin.isatty():
             print(guess)
 
@@ -422,8 +450,10 @@ def main():
             [CORRECT_COLOR + c + NO_COLOR for c in secret_word]
         )
         print("Sorry, you've run out of attempts. The correct word was ", end="")
+
         print("'" + formatted_secret_word + "'.")
 
-
+# DO NOT change these lines
 if __name__ == "__main__":
-    main()
+    main() 
+    
