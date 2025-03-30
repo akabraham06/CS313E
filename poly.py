@@ -187,12 +187,14 @@ def main():
     num = int(input())
     p = LinkedList()
     for _ in range(num):
-        p.insert_term(int(input()), int(input()))
+        a = input().split()
+        p.insert_term(int(a[0]), int(a[1]))
     # read data from stdin (terminal/file) using input() and create polynomial q
     num = int(input())
     q = LinkedList()
     for _ in range(num):
-        q.insert_term(int(input()), int(input()))
+        a = input().split()
+        q.insert_term(int(a[0]), int(a[1]))
     # get sum of p and q as a new linked list and print sum
     print(str(p.add(q)))
     # get product of p and q as a new linked list and print product
