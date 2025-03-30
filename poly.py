@@ -184,14 +184,14 @@ class LinkedList:
 
 def main():
     # read data from stdin (terminal/file) using input() and create polynomial p
-    num = input()
+    num = int(input())
     p = LinkedList()
-    for i in range(num):
+    for _ in range(num):
         p.insert_term(input(), input())
     # read data from stdin (terminal/file) using input() and create polynomial q
-    num = input()
+    num = int(input())
     q = LinkedList()
-    for i in range(num):
+    for _ in range(num):
         q.insert_term(input(), input())
     # get sum of p and q as a new linked list and print sum
     print(str(p.add(q)))
