@@ -190,7 +190,9 @@ def main():
         a = input().split()
         p.insert_term(int(a[0]), int(a[1]))
     # read data from stdin (terminal/file) using input() and create polynomial q
+    input()
     num = int(input())
+
     q = LinkedList()
     for _ in range(num):
         a = input().split()
